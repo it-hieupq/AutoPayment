@@ -12,12 +12,10 @@ pipeline {
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
-		stages {
-			stage('Test Docker Access') {
-				steps {
-					// Lệnh này phải chạy thành công bên trong Agent
-					sh 'docker --version'
-				}
+		stage('Test Docker Access') {
+			steps {
+				// Lệnh này phải chạy thành công bên trong Agent
+				sh 'docker --version'
 			}
 		}
     }
