@@ -1,7 +1,12 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'maven:3.9.6-jdk-17'
+            args '-v /var/run/docker.sock:/var/run/docker.sock'
+        }
+    }
     tools {
-            maven 'm3'
+        maven 'm3'
     }
     environment {
         IMAGE_NAME = "loan-business"
