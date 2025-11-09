@@ -9,7 +9,7 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.demo.autopayment</groupId>
-	<artifactId>autoayment</artifactId>
+	<artifactId>loan-business</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<name>autopayment</name>
 	<description>AutoPayment</description>
