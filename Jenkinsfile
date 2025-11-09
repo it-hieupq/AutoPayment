@@ -12,11 +12,18 @@ pipeline {
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
-        stage('Build Java') {
-            steps {
-                sh 'mvn clean package -DskipTests'
-            }
-        }
+		// Stage này sử dụng Agent Docker để build code
+		stage('Build Java') {
+			agent {
+				docker {
+					// Sử dụng Tag chính xác đã hoạt động
+					image 'maven:3-openjdk-17'
+				}
+			}
+			steps {
+				sh 'mvn clean package -DskipTests'
+			}
+		}
         stage('Build Docker image') {
 			// Chạy trong Docker Agent khác có Docker CLI
 			agent {
