@@ -49,6 +49,7 @@ pipeline {
 			}
 		}
         stage('Update manifest for ArgoCD') {
+			agent any
             steps {
                 sh """
                 git clone ${DEPLOY_REPO} deploy
