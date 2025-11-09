@@ -1,0 +1,93 @@
+# This is a PlantUML sequence diagram for the Loan Processing System
+# It illustrates the interactions between various components in the system
+# The diagram is divided into two main sections:
+# 1. Scheduler kicks off every 10 minutes
+# 2. PaymentProcessor thread is always running
+# The diagram shows how the LoanScheduler finds unprocessed loan tasks,
+# enqueues them into the LoanQueueService, and how the PaymentProcessor
+# processes these tasks. It also handles scenarios like requeuing tasks
+# when the queue is empty or when the maximum concurrent processing limit
+# is reached. Additionally, it shows how the system interacts with Redis
+# to manage the state of loan processing and how it integrates with
+# Camunda for process management.
+
+# make style for all actors and participants
+skinparam actorStyle awesome
+skinparam actorFontSize 12
+skinparam participantFontSize 12
+skinparam actorFontColor #000000
+skinparam participantFontColor #000000
+skinparam actorBackgroundColor #FFFFFF
+skinparam participantBackgroundColor #FFFFFF
+skinparam actorBorderColor #000000
+skinparam participantBorderColor #000000
+skinparam sequenceParticipantBackgroundColor #FFFFFF
+skinparam sequenceParticipantBorderColor #000000
+skinparam sequenceParticipantFontColor #000000
+skinparam sequenceParticipantFontSize 12
+skinparam sequenceParticipantFontStyle bold
+skinparam sequenceArrowFontStyle bold
+skinparam sequenceArrowFontColor #000000
+skinparam sequenceArrowColor #000000
+skinparam sequenceArrowThickness 2
+skinparam sequenceArrowFontSize 12
+
+
+@startuml LoanProcessingSequence
+
+actor "System Scheduler" as Scheduler
+participant LoanScheduler
+participant LoanRepository
+participant LoanQueueService
+participant PaymentProcessor
+participant RedisService
+participant "Camunda Process" as Camunda
+
+== Scheduled trigger every 10 minutes from 07:00 to 22:00 ==
+Scheduler -> LoanScheduler: schedule() @Scheduled(cron = "0 0/10 7-22 * * ?")
+LoanScheduler -> LoanRepository: findTop1000Unprocessed()
+LoanRepository --> LoanScheduler: List<LoanTask>
+loop for each loanTask (up to 1000)
+    LoanScheduler -> LoanQueueService: enqueue(loanTask)
+end
+
+== PaymentProcessor starts single thread after startup ==
+
+activate PaymentProcessor
+
+loop forever
+    PaymentProcessor -> LoanQueueService: dequeue()
+    alt queue is empty
+        note right: Block here until task is available
+    else
+        LoanQueueService --> PaymentProcessor: LoanTask
+
+        PaymentProcessor -> RedisService: getCurrentProcessingCount()
+        alt pool full (>= MAX_CONCURRENT)
+            PaymentProcessor -> LoanQueueService: requeueWithDelay(task, 100ms)
+            note right: Retry later due to capacity limit
+        else
+            PaymentProcessor -> RedisService: isPhoneProcessing(task.phoneNumber)
+            alt phone already in process
+                PaymentProcessor -> LoanQueueService: requeueWithDelay(task, 100ms)
+            else
+                PaymentProcessor -> RedisService: addLoan(phone, loanId)
+
+                == Trigger Camunda BPMN Process ==
+                PaymentProcessor -> Camunda: startLoanProcess(loanId)
+
+                alt process finished successfully
+                    PaymentProcessor -> LoanRepository: markAsProcessed(loanId, now)
+                    PaymentProcessor -> RedisService: removeLoan(phone)
+                else process error or BPMN exception
+                    PaymentProcessor -> RedisService: removeLoan(phone)
+                    PaymentProcessor -> LoanQueueService: requeueWithDelay(task, 100ms)
+                    note right: Retry logic - task will come back
+                end
+            end
+        end
+    end
+end
+deactivate PaymentProcessor
+
+@enduml

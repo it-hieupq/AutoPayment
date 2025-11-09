@@ -1,0 +1,124 @@
+@startuml AutoPaymentClassDiagram
+
+package "Entity" {
+  class AutoPaymentBpmTask {
+    - loanId: String
+    - phoneNumber: String
+  }
+
+  class AutoPaymentDebitEntity {
+    - loanId: String
+    - phoneNumber: String
+    - createdAt: LocalDateTime
+    - lastProcessedAt: LocalDateTime
+  }
+}
+
+package "Repository" {
+  interface AutoPaymentDebitRepo {
+    + findTop1000Unprocessed(Pageable): List<AutoPaymentBpmTask>
+    + markAsProcessed(loanId, time): void
+  }
+}
+
+package "Queue" {
+  interface AutoPaymentBpmQueueService {
+    + enqueue(task): void
+    + dequeue(): AutoPaymentBpmTask
+    + tryDequeue(): AutoPaymentBpmTask
+    + requeueWithDelay(task, delay): void
+  }
+
+  class AutoPaymentBpmQueueServiceImpl implements AutoPaymentBpmQueueService
+}
+
+package "Processing" {
+  interface AutoPaymentBpmProcessor {
+    + tryDequeueAndProcessOnce(): void
+  }
+
+  class AutoPaymentBpmProcessorImpl implements AutoPaymentBpmProcessor {
+    - MAX_POOL_SIZE: int
+  }
+}
+
+package "Infra" {
+  class RedisService {
+    + get(key, typeRef): Map
+    + set(key, value): void
+  }
+
+  class RetryPolicy {
+    + canExecute(task): boolean
+    + recordFailure(task): void
+  }
+
+  class AutoPaymentBpmQueueMonitor {
+    + logStart(task): void
+    + logRetry(task): void
+    + logSuccess(task): void
+  }
+}
+
+AutoPaymentBpmQueueServiceImpl --> AutoPaymentBpmQueueService
+AutoPaymentBpmProcessorImpl --> AutoPaymentBpmProcessor
+AutoPaymentBpmProcessorImpl --> AutoPaymentBpmQueueService
+AutoPaymentBpmProcessorImpl --> AutoPaymentDebitRepo
+AutoPaymentBpmProcessorImpl --> RedisService
+AutoPaymentBpmProcessorImpl --> RetryPolicy
+AutoPaymentBpmProcessorImpl --> AutoPaymentBpmQueueMonitor
+AutoPaymentDebitRepo --> AutoPaymentDebitEntity
+AutoPaymentDebitRepo --> AutoPaymentBpmTask
+
+@enduml
+
+
+@startuml AutoPaymentSequenceDiagram
+actor Scheduler
+participant "AutoPaymentBpmQueueServiceImpl" as Queue
+participant "AutoPaymentBpmProcessorImpl" as Processor
+participant "RedisService" as Redis
+participant "AutoPaymentDebitRepo" as Repo
+participant "AutoPaymentBpmQueueMonitor" as Monitor
+
+Scheduler -> Queue: enqueue(task)
+
+loop Every 300ms
+  Processor -> Queue: tryDequeue()
+  alt queue empty
+    return null
+  else
+    Processor -> Redis: isPoolFull()
+    alt pool full
+      return
+    else
+      Processor -> Redis: isPhoneInProgress()
+      alt phone in progress
+        Processor -> Queue: requeueWithDelay(task)
+        return
+      else
+        Processor -> Redis: addToPool(msisdn, loanId)
+        Processor -> RetryPolicy: canExecute(task)
+        alt cannot execute
+          Processor -> Redis: removeFromPool(msisdn)
+          return
+        else
+          Processor -> Processor: startCamundaProcess(task)
+          alt start fails
+            Processor -> RetryPolicy: recordFailure(task)
+            Processor -> Redis: removeFromPool(msisdn)
+            Processor -> Queue: requeueWithDelay(task)
+            Processor -> Monitor: logRetry(task)
+          else
+            Processor -> Monitor: logStart(task)
+            ... 1.5s delay ...
+            Processor -> Repo: markAsProcessed(loanId)
+            Processor -> Redis: removeFromPool(msisdn)
+            Processor -> Monitor: logSuccess(task)
+          end
+        end
+      end
+    end
+  end
+end
+@enduml
