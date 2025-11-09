@@ -1,10 +1,5 @@
 pipeline {
-    agent {
-        docker {
-            image 'maven:3-openjdk-17'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
+	agent none
     environment {
         IMAGE_NAME = "loan-business"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
