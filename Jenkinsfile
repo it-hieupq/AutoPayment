@@ -3,7 +3,7 @@ pipeline {
     environment {
         IMAGE_NAME = "loan-business"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
-        REGISTRY = "localhost:5000"  // dùng local registry
+        REGISTRY = "host.docker.internal:5000"  // dùng local registry
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
