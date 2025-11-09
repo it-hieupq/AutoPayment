@@ -21,7 +21,7 @@ pipeline {
 			agent any
 			steps {
 				// Chạy lệnh Docker trong container 'docker:latest' tạm thời
-				withDockerContainer(name: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
+				withDockerContainer(image: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
 					sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
 				}
 			}
@@ -29,7 +29,7 @@ pipeline {
         stage('Push Docker image') {
 			agent any
 			steps {
-				withDockerContainer(name: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
+				withDockerContainer(image: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
 					sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 				}
 			}
