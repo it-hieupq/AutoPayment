@@ -7,30 +7,21 @@ pipeline {
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
-		// Stage này sử dụng Agent Docker để build code
-		stage('Build Java') {
+		stage('Build and Tag Docker image') {
 			agent {
 				docker {
-					// Sử dụng Tag chính xác đã hoạt động
-					image 'maven:3-openjdk-17'
-				}
-			}
-			steps {
-				sh 'mvn clean package -DskipTests'
-			}
-		}
-        stage('Build Docker image') {
-			// Chạy trong Docker Agent khác có Docker CLI
-			agent {
-				docker {
-					image 'docker:latest'
+					image 'maven:3.9.6-eclipse-temurin-17'
 					args '-v /var/run/docker.sock:/var/run/docker.sock'
 				}
 			}
 			steps {
+				// 1. Build Java (tạo ra file JAR)
+				sh 'mvn clean package -DskipTests'
+
+				// 2. Build Docker Image (sử dụng file JAR vừa tạo)
 				sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
 			}
-        }
+		}
         stage('Push Docker image') {
 			agent {
 				docker {
