@@ -1,5 +1,8 @@
 pipeline {
     agent any
+    tools {
+            maven 'm3'
+    }
     environment {
         IMAGE_NAME = "loan-business"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
