@@ -7,12 +7,10 @@ pipeline {
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
-		// Stage này sử dụng Agent Docker để build code
 		stage('Build Java') {
 			agent {
 				docker {
-					// Sử dụng Tag chính xác đã hoạt động
-					image 'maven:3-openjdk-17'
+					image 'maven:3.9.6-eclipse-temurin-17'
 				}
 			}
 			steps {
@@ -20,27 +18,21 @@ pipeline {
 			}
 		}
         stage('Build Docker image') {
-			// Chạy trong Docker Agent khác có Docker CLI
-			agent {
-				docker {
-					image 'docker:latest'
-					args '-v /var/run/docker.sock:/var/run/docker.sock'
-				}
-			}
+			agent any
 			steps {
-				sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
+				// Chạy lệnh Docker trong container 'docker:latest' tạm thời
+				withDockerContainer(name: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
+					sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
+				}
 			}
         }
         stage('Push Docker image') {
-			agent {
-				docker {
-					image 'docker:latest'
-					args '-v /var/run/docker.sock:/var/run/docker.sock'
+			agent any
+			steps {
+				withDockerContainer(name: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
+					sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 				}
 			}
-            steps {
-                sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-            }
         }
         stage('Update manifest for ArgoCD') {
             steps {
