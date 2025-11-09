@@ -20,13 +20,24 @@ pipeline {
 		}
 
 		// Stage Build Docker Image: Chạy trên Agent gốc (my-jenkins-with-docker:lts)
+
 		stage('Build Docker image') {
-			// Chạy trên Agent gốc (Agent 'any' hoặc 'label')
 			agent any
 			steps {
-				// Lệnh Docker CLI sẽ hoạt động vì bạn đã cài Docker CLI vào Image Jenkins
-				// Socket đã được mount thủ công trong docker run
-				sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
+				// HÀNH ĐỘNG MỚI: Copy file JAR lên thư mục gốc
+				sh 'cp target/loan-business-0.0.1-SNAPSHOT.jar ./' // CHÚ Ý: Dùng tên file JAR chính xác!
+
+				// Sửa Dockerfile để COPY file từ thư mục gốc
+				sh """
+                # Tạm thời sửa Dockerfile
+                sed -i 's|COPY target/loan-business.jar loan-business.jar|COPY loan-business-0.0.1-SNAPSHOT.jar loan-business.jar|' Dockerfile
+
+                # Thực hiện build
+                docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} .
+
+                # Khôi phục Dockerfile (tùy chọn)
+                sed -i 's|COPY loan-business-0.0.1-SNAPSHOT.jar loan-business.jar|COPY target/loan-business.jar loan-business.jar|' Dockerfile
+                """
 			}
 		}
 
