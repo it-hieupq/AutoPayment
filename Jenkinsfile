@@ -12,11 +12,6 @@ pipeline {
         DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'master', url: 'https://github.com/it-hieupq/AutoPayment.git'
-            }
-        }
         stage('Build Java') {
             steps {
                 sh 'mvn clean package -DskipTests'
