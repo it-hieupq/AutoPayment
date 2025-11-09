@@ -1,4 +1,4 @@
-FROM openjdk:17-slim
+FROM eclipse-temurin:17-jdk-jammy
 WORKDIR /app
 COPY target/loan-business.jar loan-business.jar
 EXPOSE 8080
