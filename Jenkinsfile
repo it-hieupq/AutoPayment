@@ -4,12 +4,12 @@ pipeline {
         IMAGE_NAME = "loan-business"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
         REGISTRY = "localhost:5000"  // dùng local registry
-        DEPLOY_REPO = "https://github.com/it-hieupq/loan-business-deployment.git"
+        DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
     }
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/it-hieupq/loan-business.git'
+                git branch: 'main', url: 'https://github.com/it-hieupq/AutoPayment.git'
             }
         }
         stage('Build Java') {
