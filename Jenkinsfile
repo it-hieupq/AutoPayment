@@ -18,9 +18,16 @@ pipeline {
             }
         }
         stage('Build Docker image') {
-            steps {
-                sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
-            }
+			// Chạy trong Docker Agent khác có Docker CLI
+			agent {
+				docker {
+					image 'docker:latest'
+					args '-v /var/run/docker.sock:/var/run/docker.sock'
+				}
+			}
+			steps {
+				sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
+			}
         }
         stage('Push Docker image') {
             steps {
