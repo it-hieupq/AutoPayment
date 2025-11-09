@@ -14,26 +14,29 @@ pipeline {
 				}
 			}
 			steps {
+				// Đảm bảo file JAR được tạo ra
 				sh 'mvn clean package -DskipTests'
 			}
 		}
-        stage('Build Docker image') {
+
+		// Stage Build Docker Image: Chạy trên Agent gốc (my-jenkins-with-docker:lts)
+		stage('Build Docker image') {
+			// Chạy trên Agent gốc (Agent 'any' hoặc 'label')
 			agent any
 			steps {
-				// Chạy lệnh Docker trong container 'docker:latest' tạm thời
-				withDockerContainer(image: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
-					sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
-				}
+				// Lệnh Docker CLI sẽ hoạt động vì bạn đã cài Docker CLI vào Image Jenkins
+				// Socket đã được mount thủ công trong docker run
+				sh "docker build -t ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG} ."
 			}
-        }
-        stage('Push Docker image') {
+		}
+
+		// Stage Push Docker image: Chạy trên Agent gốc
+		stage('Push Docker image') {
 			agent any
 			steps {
-				withDockerContainer(image: 'docker:latest', args: '-v /var/run/docker.sock:/var/run/docker.sock') {
-					sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
-				}
+				sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 			}
-        }
+		}
         stage('Update manifest for ArgoCD') {
             steps {
                 sh """
