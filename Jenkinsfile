@@ -4,7 +4,7 @@ pipeline {
         IMAGE_NAME = "loan-business"
         IMAGE_TAG = "v1.${BUILD_NUMBER}"
         REGISTRY = "host.docker.internal:5000"  // dùng local registry
-        DEPLOY_REPO = "https://github.com/it-hieupq/AutoPayment.git"
+        DEPLOY_REPO = "https://github.com/it-hieupq/loan-business-deployment.git"
     }
     stages {
 		stage('Build Java') {
