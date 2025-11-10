@@ -5,7 +5,7 @@ pipeline {
 		IMAGE_TAG = "${BUILD_NUMBER}"
 		REGISTRY = "host.docker.internal:5000"  // dùng local registry
 		DEPLOY_REPO = "https://github.com/it-hieupq/loan-business-deployment.git"
-		PAT_CREDENTIALS_ID = it-hieupq
+		PAT_CREDENTIALS_ID = "it-hieupq"
 	}
 	stages {
 		stage('Build Java') {
