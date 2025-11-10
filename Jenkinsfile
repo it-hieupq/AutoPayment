@@ -52,6 +52,8 @@ pipeline {
 			agent any
             steps {
                 sh """
+                # 1. THÊM LỆNH XÓA (Nếu thư mục tồn tại)
+				rm -rf deploy
                 git clone ${DEPLOY_REPO} deploy
                 cd deploy
                 sed -i 's|image: .*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|' loan-business-deploy.yaml
