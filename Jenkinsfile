@@ -1,12 +1,13 @@
 pipeline {
 	agent none
-    environment {
-        IMAGE_NAME = "loan-business"
-        IMAGE_TAG = "v1.${BUILD_NUMBER}"
-        REGISTRY = "host.docker.internal:5000"  // dùng local registry
-        DEPLOY_REPO = "https://github.com/it-hieupq/loan-business-deployment.git"
-    }
-    stages {
+	environment {
+		IMAGE_NAME = "loan-business"
+		IMAGE_TAG = "${BUILD_NUMBER}"
+		REGISTRY = "host.docker.internal:5000"  // dùng local registry
+		DEPLOY_REPO = "https://github.com/it-hieupq/loan-business-deployment.git"
+		PAT_CREDENTIALS_ID = it-hieupq
+	}
+	stages {
 		stage('Build Java') {
 			agent {
 				docker {
@@ -48,21 +49,43 @@ pipeline {
 				sh "docker push ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
 			}
 		}
-        stage('Update manifest for ArgoCD') {
+		stage('Update manifest for ArgoCD') {
 			agent any
-            steps {
-                sh """
-                # 1. THÊM LỆNH XÓA (Nếu thư mục tồn tại)
-				rm -rf deploy
-                git clone ${DEPLOY_REPO} deploy
-                cd deploy
-                sed -i 's|image: .*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}|' loan-business-deploy.yaml
-                git config user.name "jenkins"
-                git config user.email "jenkins@local"
-                git commit -am "update image to ${IMAGE_TAG}"
-                git push
-                """
-            }
-        }
-    }
+			steps {
+				// Tải Credentials và Ánh xạ thành biến
+				withCredentials([
+					// Lấy credentials có ID là PAT_CREDENTIALS_ID
+					usernamePassword(
+						credentialsId: env.PAT_CREDENTIALS_ID,
+						// Ánh xạ Username thành biến tên là GIT_USER
+						usernameVariable: 'GIT_USER',
+						// Ánh xạ Password/Token thành biến tên là GIT_PAT
+						passwordVariable: 'GIT_PAT'
+					)
+				]) {
+					sh """
+                    # 1. THÊM LỆNH XÓA (Nếu thư mục tồn tại)
+                    rm -rf deploy
+
+                    # 2. Clone Repository Manifests vào thư mục 'deploy' (VẪN CẦN TOKEN ĐỂ CLONE REPO PRIVATE)
+                    git clone https://${GIT_USER}:${GIT_PAT}@github.com/it-hieupq/loan-business-deployment.git deploy
+
+                    cd deploy
+
+                    # 3. Sửa Manifest
+                    sed -i s|image: .*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}| loan-business-deploy.yaml
+
+                    # 4. Commit (Giữ nguyên)
+                    git config user.name "jenkins"
+                    git config user.email "jenkins@local"
+                    git commit -am "update image to ${IMAGE_TAG}"
+
+                    # 5. SỬA LỖI GIT PUSH: Truyền Token vào URL Push
+                    git push https://${GIT_USER}:${GIT_PAT}@github.com/it-hieupq/loan-business-deployment.git master
+                    """
+
+				}
+			}
+		}
+	}
 }
