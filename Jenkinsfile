@@ -1,5 +1,11 @@
 pipeline {
 	agent none
+	options {
+		// Chỉ giữ lại 10 bản build gần nhất
+		buildDiscarder(logRotator(numToKeepStr: '10'))
+		// Bạn cũng có thể kết hợp với giới hạn thời gian (ví dụ: giữ tối đa 30 ngày VÀ 10 bản gần nhất)
+		// buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
+	}
 	environment {
 		IMAGE_NAME = "loan-business"
 		IMAGE_TAG = "${BUILD_NUMBER}"
