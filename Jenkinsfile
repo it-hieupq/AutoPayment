@@ -73,7 +73,7 @@ pipeline {
                     cd deploy
 
                     # 3. Sửa Manifest
-                    sed -i s|image: .*|image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}| loan-business-deploy.yaml
+                    sed -i "s#image: .*#image: ${REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}#" loan-business-deploy.yaml
 
                     # 4. Commit (Giữ nguyên)
                     git config user.name "jenkins"
